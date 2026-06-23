@@ -385,7 +385,31 @@ impl Drop for ActiveNdiSession {
 }
 
 fn resolve_library_path() -> Result<PathBuf, NdiError> {
-    let candidates: Vec<&str> = if cfg!(target_os = "macos") {
+    // 1. Bundled app: library is in Contents/Resources/ next to the app binary.
+    //    current_exe() → Contents/MacOS/Rhema
+    //    → parent → Contents/MacOS/
+    //    → parent → Contents/
+    //    → join Resources/<lib> → Contents/Resources/<lib>
+    let bundled_name = if cfg!(target_os = "macos") {
+        "libndi.dylib"
+    } else if cfg!(target_os = "windows") {
+        "Processing.NDI.Lib.x64.dll"
+    } else {
+        "libndi.so"
+    };
+
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(resources) = exe.parent().and_then(|p| p.parent()).map(|p| p.join("Resources")) {
+            let bundled = resources.join(bundled_name);
+            if bundled.exists() {
+                log::info!("NDI: using bundled library at {}", bundled.display());
+                return Ok(bundled);
+            }
+        }
+    }
+
+    // 2. Dev fallback: library relative to workspace root (CARGO_MANIFEST_DIR).
+    let dev_candidates: Vec<&str> = if cfg!(target_os = "macos") {
         vec!["sdk/ndi/macos/libndi.dylib"]
     } else if cfg!(target_os = "windows") {
         vec!["sdk/ndi/windows/Processing.NDI.Lib.x64.dll"]
@@ -398,17 +422,18 @@ fn resolve_library_path() -> Result<PathBuf, NdiError> {
     };
 
     let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..");
-    for candidate in &candidates {
+    for candidate in &dev_candidates {
         if candidate.is_empty() {
             continue;
         }
         let absolute = base.join(candidate);
         if absolute.exists() {
+            log::info!("NDI: using dev library at {}", absolute.display());
             return Ok(absolute);
         }
     }
 
-    Err(NdiError::LibraryNotFound(candidates.join(", ")))
+    Err(NdiError::LibraryNotFound(dev_candidates.join(", ")))
 }
 
 fn load_symbol<'a, T>(

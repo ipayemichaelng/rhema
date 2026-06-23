@@ -3,7 +3,8 @@ import { PanelHeader } from "@/components/ui/panel-header"
 import { LevelMeter } from "@/components/ui/level-meter"
 import { Button } from "@/components/ui/button"
 import { ApiKeyPrompt } from "@/components/ui/api-key-prompt"
-import { MicIcon, MicOffIcon } from "lucide-react"
+import { MicIcon, MicOffIcon, BookmarkIcon } from "lucide-react"
+import { invoke } from "@tauri-apps/api/core"
 import {
   useAudioStore,
   useDetectionStore,
@@ -50,6 +51,7 @@ function LivePartialLine({ scrollRef }: { scrollRef: RefObject<HTMLDivElement | 
 
 export function TranscriptPanel() {
   const [showKeyPrompt, setShowKeyPrompt] = useState(false)
+  const [savedPath, setSavedPath] = useState<string | null>(null)
   const onMissingApiKey = useCallback(() => setShowKeyPrompt(true), [])
   const {
     segments,
@@ -58,6 +60,26 @@ export function TranscriptPanel() {
     startTranscription,
     stopTranscription,
   } = useTranscription({ onMissingApiKey })
+
+  const saveToObsidian = useCallback(async () => {
+    if (segments.length === 0) return
+    const transcript = segments.map((s) => s.text).join("\n\n")
+    const detectedVerses = useDetectionStore
+      .getState()
+      .detections.map((d) => d.verse_ref)
+      .filter((v, i, a) => a.indexOf(v) === i)
+    try {
+      const path = await invoke<string>("save_sermon_to_obsidian", {
+        transcript,
+        detectedVerses,
+        sermonTitle: undefined,
+      })
+      setSavedPath(path)
+      setTimeout(() => setSavedPath(null), 4000)
+    } catch (e) {
+      console.error("Failed to save to Obsidian:", e)
+    }
+  }, [segments])
   const hasPartial = useTranscriptStore((s) => s.currentPartial.length > 0)
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -260,7 +282,7 @@ export function TranscriptPanel() {
       </div>
 
       {/* Bottom control */}
-      <div className="flex gap-2 border-t border-border px-3 py-2">
+      <div className="flex items-center gap-2 border-t border-border px-3 py-2">
         {isTranscribing ? (
           <Button
             variant="ghost"
@@ -273,8 +295,20 @@ export function TranscriptPanel() {
           </Button>
         ) : (
           <Button variant="ghost" size="sm" onClick={startTranscription}>
-              <MicIcon className="size-3" />
+            <MicIcon className="size-3" />
             Start transcribing
+          </Button>
+        )}
+        {segments.length > 0 && !isTranscribing && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="ml-auto text-muted-foreground hover:text-foreground"
+            onClick={saveToObsidian}
+            title="Save transcript to Obsidian vault"
+          >
+            <BookmarkIcon className="size-3" />
+            {savedPath ? "Saved!" : "Save to Obsidian"}
           </Button>
         )}
       </div>

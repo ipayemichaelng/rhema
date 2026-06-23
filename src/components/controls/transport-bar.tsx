@@ -1,7 +1,6 @@
 import { useState } from "react"
 import { LevelMeter } from "@/components/ui/level-meter"
 import { LiveIndicator } from "@/components/ui/live-indicator"
-import { Badge } from "@/components/ui/badge"
 import { MicIcon, PaletteIcon, CastIcon, SunIcon, MoonIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SettingsDialog } from "@/components/settings-dialog"
@@ -24,11 +23,8 @@ export function TransportBar() {
       {/* Left: Logo + Plan Badge */}
       <div className="flex items-center gap-2.5">
         <span className="text-sm font-semibold tracking-tight text-foreground">
-          Rhema
+          Catalyst Scripture
         </span>
-        <Badge variant="outline" className="text-[0.5625rem] uppercase">
-          Free
-        </Badge>
       </div>
 
       {/* Right: Audio + Status + Settings */}

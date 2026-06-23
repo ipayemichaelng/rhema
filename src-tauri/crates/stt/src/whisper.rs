@@ -20,9 +20,9 @@ use crate::types::{TranscriptEvent, Word};
 /// Maximum audio buffer before force-flushing to inference (10 seconds at 16 kHz).
 const MAX_BUFFER_SAMPLES: usize = 16_000 * 10;
 
-/// Minimum audio buffer for inference (1.0 seconds).
-/// Whisper warns "input is too short" below 1s.
-const MIN_BUFFER_SAMPLES: usize = 16_000;
+/// Minimum audio buffer for inference (0.625 seconds).
+/// Reduced from 1.0s to cut detection latency — verse refs are short phrases.
+const MIN_BUFFER_SAMPLES: usize = 10_000;
 
 /// Convert i16 PCM samples to f32 in [-1.0, 1.0] range.
 fn i16_to_f32(samples: &[i16]) -> Vec<f32> {
@@ -145,7 +145,7 @@ impl SttProvider for WhisperProvider {
             let vad_config = VadConfig {
                 silence_threshold: 0.01,
                 frame_threshold: 0.005,
-                min_voice_frames: 6,
+                min_voice_frames: 2,
                 ..VadConfig::default()
             };
             let mut vad = Vad::new(vad_config);
@@ -160,7 +160,7 @@ impl SttProvider for WhisperProvider {
                     break;
                 }
 
-                match audio_rx.recv_timeout(Duration::from_millis(50)) {
+                match audio_rx.recv_timeout(Duration::from_millis(15)) {
                     Ok(samples) => {
                         let frame = AudioFrame { samples, timestamp_ms: 0 };
                         let result = vad.process(&frame);

@@ -10,6 +10,8 @@ interface BroadcastState {
   themes: BroadcastTheme[]
   activeThemeId: string
   altActiveThemeId: string
+  altLinkedToMain: boolean
+  setAltLinkedToMain: (linked: boolean) => void
   isLive: boolean
   liveVerse: VerseRenderData | null
 
@@ -98,6 +100,7 @@ export const useBroadcastStore = create<BroadcastState>((set, get) => ({
   themes: [...BUILTIN_THEMES],
   activeThemeId: BUILTIN_THEMES[0].id,
   altActiveThemeId: BUILTIN_THEMES[0].id,
+  altLinkedToMain: false,
   isLive: false,
   liveVerse: null,
   isDesignerOpen: false,
@@ -265,6 +268,7 @@ export const useBroadcastStore = create<BroadcastState>((set, get) => ({
   },
   setSelectedElement: (selectedElement) => set({ selectedElement }),
   setRenamingTheme: (id) => set({ renamingThemeId: id }),
+  setAltLinkedToMain: (altLinkedToMain) => set({ altLinkedToMain }),
 }))
 
 // ── Theme persistence via tauri-plugin-store ──
@@ -287,6 +291,7 @@ export function hydrateBroadcastThemes(): Promise<void> {
       const customThemes = (await store.get("customThemes")) as BroadcastTheme[] | undefined
       const activeId = (await store.get("activeThemeId")) as string | undefined
       const altActiveId = (await store.get("altActiveThemeId")) as string | undefined
+      const altLinkedToMain = (await store.get("altLinkedToMain")) as boolean | undefined
 
       const patch: Partial<BroadcastState> = {}
       if (customThemes && Array.isArray(customThemes) && customThemes.length > 0) {
@@ -294,6 +299,7 @@ export function hydrateBroadcastThemes(): Promise<void> {
       }
       if (activeId) patch.activeThemeId = activeId
       if (altActiveId) patch.altActiveThemeId = altActiveId
+      if (altLinkedToMain !== undefined) patch.altLinkedToMain = altLinkedToMain
 
       if (Object.keys(patch).length > 0) {
         useBroadcastStore.setState(patch)
@@ -304,7 +310,8 @@ export function hydrateBroadcastThemes(): Promise<void> {
         const changed =
           state.themes !== prevState.themes ||
           state.activeThemeId !== prevState.activeThemeId ||
-          state.altActiveThemeId !== prevState.altActiveThemeId
+          state.altActiveThemeId !== prevState.altActiveThemeId ||
+          state.altLinkedToMain !== prevState.altLinkedToMain
         if (!changed) return
         if (saveTimer) clearTimeout(saveTimer)
         saveTimer = setTimeout(() => {
@@ -332,6 +339,7 @@ async function persistBroadcastThemes(state: BroadcastState): Promise<void> {
     await store.set("customThemes", customThemes)
     await store.set("activeThemeId", state.activeThemeId)
     await store.set("altActiveThemeId", state.altActiveThemeId)
+    await store.set("altLinkedToMain", state.altLinkedToMain)
     await store.save()
   } catch {
     console.warn("[broadcast] Failed to persist themes")

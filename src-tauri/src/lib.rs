@@ -63,6 +63,7 @@ pub fn run() {
             commands::remote::stop_http,
             commands::remote::get_http_status,
             commands::remote::update_remote_status,
+            commands::notes::save_sermon_to_obsidian,
         ])
         .setup(|app| {
             use tauri::Manager;

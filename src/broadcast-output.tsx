@@ -153,8 +153,8 @@ function BroadcastCanvas() {
   /** Push a burst of 3 frames after content changes (NDI receivers need a few frames to sync) */
   const pushNdiBurst = useCallback(() => {
     void pushNdiFrame()
-    setTimeout(() => void pushNdiFrame(), 150)
-    setTimeout(() => void pushNdiFrame(), 300)
+    setTimeout(() => void pushNdiFrame(), 50)
+    setTimeout(() => void pushNdiFrame(), 100)
   }, [pushNdiFrame])
 
   useEffect(() => {
@@ -220,13 +220,13 @@ function BroadcastCanvas() {
     }
   }, [draw, logDebug, preloadBackgroundImage, pushNdiFrame, pushNdiBurst])
 
-  // Slow keepalive: push one frame every 2s if idle (prevents NDI receivers from dropping the source)
+  // Keepalive: push one frame every 500ms if idle (Wirecast drops sources after ~1s of silence)
   useEffect(() => {
     const timer = setInterval(() => {
       if (!ndiConfigRef.current.active) return
       const elapsed = Date.now() - lastPushRef.current
-      if (elapsed > 2000) void pushNdiFrame()
-    }, 2000)
+      if (elapsed > 500) void pushNdiFrame()
+    }, 500)
     return () => clearInterval(timer)
   }, [pushNdiFrame])
 

@@ -72,6 +72,8 @@ export function BroadcastSettings({
 }) {
   const themes = useBroadcastStore((s) => s.themes)
   const activeThemeId = useBroadcastStore((s) => s.activeThemeId)
+  const altLinkedToMain = useBroadcastStore((s) => s.altLinkedToMain)
+  const setAltLinkedToMain = useBroadcastStore((s) => s.setAltLinkedToMain)
 
   // Main output state
   const [mainEnabled, setMainEnabled] = useState(false)
@@ -80,7 +82,7 @@ export function BroadcastSettings({
   const [monitors, setMonitors] = useState<Monitor[]>([])
   const [selectedMonitor, setSelectedMonitor] = useState("0")
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
-  const [ndiSourceName, setNdiSourceName] = useState("Rhema Output")
+  const [ndiSourceName, setNdiSourceName] = useState("Catalyst Scripture Output")
   const [ndiResolution, setNdiResolution] = useState<NdiResolution>("r1080p")
   const [ndiFrameRate, setNdiFrameRate] = useState<NdiFrameRate>("fps24")
   const [ndiAlphaMode, setNdiAlphaMode] = useState<NdiAlphaMode>("straightAlpha")
@@ -94,7 +96,7 @@ export function BroadcastSettings({
   const [altOutputType, setAltOutputType] = useState<OutputType>("ndi")
   const [altSelectedMonitor, setAltSelectedMonitor] = useState("0")
   const [altIsPreviewOpen, setAltIsPreviewOpen] = useState(false)
-  const [altNdiSourceName, setAltNdiSourceName] = useState("Rhema Alt")
+  const [altNdiSourceName, setAltNdiSourceName] = useState("Catalyst Scripture Alt")
   const [altNdiResolution, setAltNdiResolution] = useState<NdiResolution>("r1080p")
   const [altNdiFrameRate, setAltNdiFrameRate] = useState<NdiFrameRate>("fps24")
   const [altNdiAlphaMode, setAltNdiAlphaMode] = useState<NdiAlphaMode>("straightAlpha")
@@ -230,6 +232,42 @@ export function BroadcastSettings({
     }
   }
 
+  const handleAltToggleNdi = async () => {
+    try {
+      if (altNdiActive) {
+        await invoke("stop_ndi", { outputId: "alt" })
+        syncNdiConfigToOutput("alt", false, altNdiFrameRate, altNdiResolution)
+        setAltNdiActive(false)
+        if (!altIsPreviewOpen) {
+          await invoke("close_broadcast_window", { outputId: "alt" }).catch(() => {})
+        }
+      } else {
+        await invoke("ensure_broadcast_window", { outputId: "alt" })
+        const request: NdiStartRequest = {
+          sourceName: altNdiSourceName,
+          resolution: altNdiResolution,
+          frameRate: altNdiFrameRate,
+          alphaMode: altNdiAlphaMode,
+        }
+        const session = await invoke<NdiSessionInfo>("start_ndi", { outputId: "alt", request })
+        setAltNdiActive(true)
+        useBroadcastStore.getState().syncBroadcastOutputFor("alt")
+        void emitTo("broadcast-alt", "broadcast:ndi-config", {
+          active: true,
+          fps: session.fps,
+          width: session.width,
+          height: session.height,
+        }).catch(() => {})
+        setTimeout(() => {
+          useBroadcastStore.getState().syncBroadcastOutputFor("alt")
+          syncNdiConfigToOutput("alt", true, altNdiFrameRate, altNdiResolution)
+        }, 300)
+      }
+    } catch (error) {
+      console.warn("Failed to toggle alt NDI", error)
+    }
+  }
+
   const handleToggleNdi = async () => {
     try {
       if (ndiActive) {
@@ -238,6 +276,9 @@ export function BroadcastSettings({
         setNdiActive(false)
         if (!isPreviewOpen) {
           await invoke("close_broadcast_window", { outputId: "main" }).catch(() => {})
+        }
+        if (altLinkedToMain && altNdiActive) {
+          await handleAltToggleNdi()
         }
       } else {
         await invoke("ensure_broadcast_window", { outputId: "main" })
@@ -260,6 +301,9 @@ export function BroadcastSettings({
           useBroadcastStore.getState().syncBroadcastOutputFor("main")
           syncNdiConfigToOutput("main", true, ndiFrameRate, ndiResolution)
         }, 300)
+        if (altLinkedToMain && altOutputType === "ndi" && !altNdiActive) {
+          await handleAltToggleNdi()
+        }
       }
     } catch {
       // Command may not exist yet
@@ -317,42 +361,6 @@ export function BroadcastSettings({
       }
     } catch (error) {
       console.warn("Failed to toggle alt preview window", error)
-    }
-  }
-
-  const handleAltToggleNdi = async () => {
-    try {
-      if (altNdiActive) {
-        await invoke("stop_ndi", { outputId: "alt" })
-        syncNdiConfigToOutput("alt", false, altNdiFrameRate, altNdiResolution)
-        setAltNdiActive(false)
-        if (!altIsPreviewOpen) {
-          await invoke("close_broadcast_window", { outputId: "alt" }).catch(() => {})
-        }
-      } else {
-        await invoke("ensure_broadcast_window", { outputId: "alt" })
-        const request: NdiStartRequest = {
-          sourceName: altNdiSourceName,
-          resolution: altNdiResolution,
-          frameRate: altNdiFrameRate,
-          alphaMode: altNdiAlphaMode,
-        }
-        const session = await invoke<NdiSessionInfo>("start_ndi", { outputId: "alt", request })
-        setAltNdiActive(true)
-        useBroadcastStore.getState().syncBroadcastOutputFor("alt")
-        void emitTo("broadcast-alt", "broadcast:ndi-config", {
-          active: true,
-          fps: session.fps,
-          width: session.width,
-          height: session.height,
-        }).catch(() => {})
-        setTimeout(() => {
-          useBroadcastStore.getState().syncBroadcastOutputFor("alt")
-          syncNdiConfigToOutput("alt", true, altNdiFrameRate, altNdiResolution)
-        }, 300)
-      }
-    } catch (error) {
-      console.warn("Failed to toggle alt NDI", error)
     }
   }
 
@@ -599,7 +607,7 @@ export function BroadcastSettings({
                   <Input
                     value={ndiSourceName}
                     onChange={(e) => setNdiSourceName(e.target.value)}
-                    placeholder="Rhema Output"
+                    placeholder="Catalyst Scripture Output"
                   />
                 </div>
                 <Button
@@ -745,8 +753,17 @@ export function BroadcastSettings({
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs text-muted-foreground">Source Name</label>
-                  <Input value={altNdiSourceName} onChange={(e) => setAltNdiSourceName(e.target.value)} placeholder="Rhema Alt" />
+                  <Input value={altNdiSourceName} onChange={(e) => setAltNdiSourceName(e.target.value)} placeholder="Catalyst Scripture Alt" />
                 </div>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    className="size-3.5 accent-lime-500"
+                    checked={altLinkedToMain}
+                    onChange={(e) => setAltLinkedToMain(e.target.checked)}
+                  />
+                  <span className="text-xs text-muted-foreground">Start automatically with main output</span>
+                </label>
                 <Button
                   variant="outline"
                   size="sm"

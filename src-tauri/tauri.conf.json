@@ -1,18 +1,18 @@
 {
   "$schema": "../../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Rhema",
-  "version": "0.1.0",
-  "identifier": "com.openbezal.rhema",
+  "productName": "Catalyst Scripture",
+  "version": "1.0.0",
+  "identifier": "com.thecatalystchurch.scripture",
   "build": {
     "frontendDist": "../build",
     "devUrl": "http://localhost:3000",
     "beforeDevCommand": "bun dev",
-    "beforeBuildCommand": "bun build"
+    "beforeBuildCommand": "bun run build"
   },
   "app": {
     "windows": [
       {
-        "title": "Rhema",
+        "title": "Catalyst Scripture",
         "width": 1280,
         "height": 800,
         "minWidth": 1024,
@@ -35,6 +35,15 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "resources": {
+      "../models/whisper/ggml-large-v3-turbo-q8_0.bin": "models/whisper/ggml-large-v3-turbo-q8_0.bin",
+      "../sdk/ndi/macos/libndi.dylib": "libndi.dylib",
+      "../data/rhema.db": "rhema.db"
+    },
+    "macOS": {
+      "minimumSystemVersion": "11.0",
+      "infoPlist": "Info.plist"
+    }
   }
 }

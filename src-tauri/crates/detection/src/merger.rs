@@ -9,7 +9,7 @@ const DEFAULT_CONFIDENCE_THRESHOLD: f64 = 0.45;
 const DEFAULT_AUTO_QUEUE_THRESHOLD: f64 = 0.80;
 
 /// Default cooldown in milliseconds between auto-displayed results.
-const DEFAULT_COOLDOWN_MS: u64 = 2500;
+const DEFAULT_COOLDOWN_MS: u64 = 800;
 
 /// A detection after merging, with an auto-queue flag.
 #[derive(Debug, Clone, PartialEq)]

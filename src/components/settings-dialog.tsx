@@ -558,8 +558,6 @@ interface CommandLogEntry {
 }
 
 function RemoteControlSection() {
-  const [oscEnabled, setOscEnabled] = useState(false)
-  const [httpEnabled, setHttpEnabled] = useState(false)
   const [oscPort, setOscPort] = useState("8000")
   const [httpPort, setHttpPort] = useState("8080")
   const [oscStatus, setOscStatus] = useState<RemoteStatus>({ running: false, port: null })
@@ -625,12 +623,10 @@ function RemoteControlSection() {
     try {
       if (oscStatus.running) {
         await invoke("stop_osc")
-        setOscEnabled(false)
         setOscError(null)
       } else {
         const port = parseInt(oscPort) || 8000
         const boundPort = await invoke<number>("start_osc", { port })
-        setOscEnabled(true)
         setOscPort(String(boundPort))
         setOscError(null)
       }
@@ -643,12 +639,10 @@ function RemoteControlSection() {
     try {
       if (httpStatus.running) {
         await invoke("stop_http")
-        setHttpEnabled(false)
         setHttpError(null)
       } else {
         const port = parseInt(httpPort) || 8080
         const boundPort = await invoke<number>("start_http", { port })
-        setHttpEnabled(true)
         setHttpPort(String(boundPort))
         setHttpError(null)
       }
@@ -743,7 +737,7 @@ function RemoteControlSection() {
       <div className="rounded-lg border border-border bg-muted/30 p-3">
         <p className="text-[0.625rem] font-medium text-muted-foreground mb-1">Firewall Note</p>
         <p className="text-[0.625rem] text-muted-foreground leading-relaxed">
-          Your OS may block incoming connections. On macOS, allow Rhema through
+          Your OS may block incoming connections. On macOS, allow Catalyst Scripture through
           System Settings → Network → Firewall. On Windows, allow through
           Windows Security → Firewall → Allow an app.
         </p>
@@ -803,7 +797,7 @@ function HelpSection() {
     <div className="space-y-6">
       <div className="space-y-1">
         <p className="text-sm text-muted-foreground">
-          Resources to help you get the most out of Rhema.
+          Resources to help you get the most out of Catalyst Scripture.
         </p>
       </div>
 
